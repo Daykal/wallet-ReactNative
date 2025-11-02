@@ -1,159 +1,105 @@
+import { useSignIn } from "@clerk/clerk-expo";
+import { Link, useRouter } from "expo-router";
+import { Text, TextInput, TouchableOpacity, View, Image } from "react-native";
 import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useSignUp } from "@clerk/clerk-expo";
-import { useRouter } from "expo-router";
-import { styles } from "../../assets/styles/auth.styles.js";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { styles } from "../../assets/styles/auth.styles";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../constants/colors";
-import { Image } from "expo-image";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
-export default function SignUpScreen() {
-  const { isLoaded, signUp, setActive } = useSignUp();
+export default function Page() {
+  const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
-  const [pendingVerification, setPendingVerification] = useState(false);
-  const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
-  // Handle submission of sign-up form
-  const onSignUpPress = async () => {
+  // Handle the submission of the sign-in form
+  const onSignInPress = async () => {
     if (!isLoaded) return;
 
-    // Start sign-up process using email and password provided
+    // Start the sign-in process using the email and password provided
     try {
-      await signUp.create({
-        emailAddress,
+      const signInAttempt = await signIn.create({
+        identifier: emailAddress,
         password,
       });
 
-      // Send user an email with verification code
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-
-      // Set 'pendingVerification' to true to display second form
-      // and capture OTP code
-      setPendingVerification(true);
-    } catch (err) {
-      // See https://clerk.com/docs/custom-flows/error-handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2));
-    }
-  };
-
-  // Handle submission of verification form
-  const onVerifyPress = async () => {
-    if (!isLoaded) return;
-
-    try {
-      // Use the code the user provided to attempt verification
-      const signUpAttempt = await signUp.attemptEmailAddressVerification({
-        code,
-      });
-
-      // If verification was completed, set the session to active
+      // If sign-in process is complete, set the created session as active
       // and redirect the user
-      if (signUpAttempt.status === "complete") {
-        await setActive({ session: signUpAttempt.createdSessionId });
+      if (signInAttempt.status === "complete") {
+        await setActive({ session: signInAttempt.createdSessionId });
         router.replace("/");
       } else {
-        // If the status is not complete, check why. User may need to
+        // If the status isn't complete, check why. User might need to
         // complete further steps.
-        console.error(JSON.stringify(signUpAttempt, null, 2));
+        console.error(JSON.stringify(signInAttempt, null, 2));
       }
     } catch (err) {
-      // See https://clerk.com/docs/custom-flows/error-handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2));
+      if (err.errors?.[0]?.code === "form_password_incorrect") {
+        setError("Password is incorrect. Please try again.");
+      } else {
+        setError("An error occurred. Please try again.");
+      }
     }
   };
-
-  if (pendingVerification) {
-    return (
-      <View style={styles.verificationContainer}>
-        <Text style={styles.verificationTitle}>Verify your email</Text>
-        {error ? (
-          <view style={styles.errorBox}>
-            <Ionicons name="alert-circle" size={24} color={COLORS.expense} />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={() => setError("")}>
-              <Ionicons
-                name="close-circle"
-                size={24}
-                color={COLORS.textLight}
-              />
-            </TouchableOpacity>
-          </view>
-        ) : null}
-
-        <TextInput
-          styles={[styles.verificationInput, error && styles.errorInput]}
-          value={code}
-          placeholder="Enter your verification code"
-          placeholderTextColor={"#9A8478"}
-          onChangeText={(code) => setCode(code)}
-        />
-        <TouchableOpacity onPress={onVerifyPress} style={styles.button}>
-          <Text style={styles.buttonText}>Verify</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   return (
     <KeyboardAwareScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={{
-        flexGrow: 1,
-      }}
+      contentContainerStyle={{ flexGrow: 1 }}
       enableOnAndroid={true}
       enableAutomaticScroll={true}
-      extraScrollHeight={120}
+      extraScrollHeight={30}
     >
       <View style={styles.container}>
         <Image
-          source={require("../../assets/images/revenue-i1.png")}
+          source={require("../../assets/images/revenue-i4.png")}
           style={styles.illustration}
         />
-        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.title}>Welcome Back</Text>
+
         {error ? (
-          <view style={styles.errorBox}>
-            <Ionicons name="alert-circle" size={24} color={COLORS.expense} />
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle" size={20} color={COLORS.expense} />
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity onPress={() => setError("")}>
-              <Ionicons
-                name="close-circle"
-                size={24}
-                color={COLORS.textLight}
-              />
+              <Ionicons name="close" size={20} color={COLORS.textLight} />
             </TouchableOpacity>
-          </view>
+          </View>
         ) : null}
+
         <TextInput
-          styles={[styles.input, error && styles.errorInput]}
+          style={[styles.input, error && styles.errorInput]}
           autoCapitalize="none"
           value={emailAddress}
           placeholder="Enter email"
-          placeholderTextColor={"#9A8478"}
-          onChangeText={(email) => setEmailAddress(email)}
+          placeholderTextColor="#9A8478"
+          onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
         />
+
         <TextInput
-          styles={[styles.input, error && styles.errorInput]}
+          style={[styles.input, error && styles.errorInput]}
           value={password}
           placeholder="Enter password"
-          placeholderTextColor={"#9A8478"}
+          placeholderTextColor="#9A8478"
           secureTextEntry={true}
           onChangeText={(password) => setPassword(password)}
         />
-        <TouchableOpacity style={styles.button} onPress={onSignUpPress}>
-          <Text>Sign up</Text>
+
+        <TouchableOpacity style={styles.button} onPress={onSignInPress}>
+          <Text style={styles.buttonText}>Sign In</Text>
         </TouchableOpacity>
+
         <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>Already have an account?</Text>
-          <TouchableOpacity>
-            <Text style={styles.linkText}>Sign in</Text>
-          </TouchableOpacity>
+          <Text style={styles.footerText}>Don&apos;t have an account?</Text>
+
+          <Link href="/sign-up" asChild>
+            <TouchableOpacity>
+              <Text style={styles.linkText}>Sign up</Text>
+            </TouchableOpacity>
+          </Link>
         </View>
       </View>
     </KeyboardAwareScrollView>
